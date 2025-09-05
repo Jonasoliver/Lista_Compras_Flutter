@@ -173,62 +173,124 @@ class _MyHomePageState extends State<MyHomePage> {
     // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Lista de Compras'),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      labelText: 'Adicionar item',
-                      border: OutlineInputBorder(),
-                    ),
-                    onSubmitted: _addItem,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () => _addItem(_controller.text),
-                  child: const Text('Adicionar'),
-                ),
-              ],
-            ),
+        backgroundColor: Colors.teal,
+        title: const Text(
+          'Lista de Compras',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+            color: Colors.white,
           ),
-          Expanded(
-            child: _items.isEmpty
-                ? const Center(child: Text('Nenhum item na lista.'))
-                : ListView.builder(
-                    itemCount: _items.length,
-                    itemBuilder: (context, index) {
-                      final item = _items[index];
-                      return ListTile(
-                        title: Text(
-                          item.name,
-                          style: TextStyle(
-                            decoration: item.bought
-                                ? TextDecoration.lineThrough
-                                : TextDecoration.none,
+        ),
+        centerTitle: true,
+        elevation: 4,
+      ),
+      body: Container(
+        color: Colors.teal.shade50,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        labelText: 'Adicionar item',
+                        labelStyle: const TextStyle(color: Colors.teal),
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.teal),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Colors.teal,
+                            width: 2,
                           ),
                         ),
-                        leading: Checkbox(
-                          value: item.bought,
-                          onChanged: (_) => _toggleBought(index),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteItem(index),
-                        ),
-                      );
-                    },
+                      ),
+                      onSubmitted: _addItem,
+                      style: const TextStyle(fontSize: 16),
+                    ),
                   ),
-          ),
-        ],
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => _addItem(_controller.text),
+                    child: const Text(
+                      'Adicionar',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _items.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Nenhum item na lista.',
+                        style: TextStyle(fontSize: 18, color: Colors.teal),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      itemCount: _items.length,
+                      itemBuilder: (context, index) {
+                        final item = _items[index];
+                        return Card(
+                          elevation: 2,
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListTile(
+                            leading: Checkbox(
+                              value: item.bought,
+                              activeColor: Colors.teal,
+                              onChanged: (_) => _toggleBought(index),
+                            ),
+                            title: Text(
+                              item.name,
+                              style: TextStyle(
+                                fontSize: 18,
+                                decoration: item.bought
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                                color: item.bought ? Colors.grey : Colors.black,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(
+                                Icons.delete,
+                                color: Colors.redAccent,
+                              ),
+                              onPressed: () => _deleteItem(index),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
