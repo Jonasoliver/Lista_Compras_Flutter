@@ -1,0 +1,7 @@
+[
+	{"name": "Arroz", "bought": false},
+	{"name": "Feijão", "bought": false},
+	{"name": "Macarrão", "bought": false},
+	{"name": "Óleo", "bought": false},
+	{"name": "Sal", "bought": false}
+]

@@ -1,7 +1,70 @@
+import 'package:flutter/foundation.dart';
+// Adicione novamente o path_provider para mobile
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
 
 void main() {
   runApp(const MyApp());
+}
+
+class ShoppingItem {
+  String name;
+  bool bought;
+
+  ShoppingItem({required this.name, this.bought = false});
+
+  factory ShoppingItem.fromJson(Map<String, dynamic> json) {
+    return ShoppingItem(name: json['name'], bought: json['bought'] ?? false);
+  }
+
+  Map<String, dynamic> toJson() => {'name': name, 'bought': bought};
+}
+
+class ShoppingListStorage {
+  static const String fileName = 'shopping_list.json';
+
+  Future<File> get _localFile async {
+    String path;
+    if (kIsWeb) {
+      throw UnsupportedError('Web não suportado para arquivo local');
+    } else if (Platform.isAndroid || Platform.isIOS) {
+      final dir = await getApplicationDocumentsDirectory();
+      path = dir.path;
+    } else {
+      path = Directory.current.path;
+    }
+    final file = File('$path/$fileName');
+    if (!await file.exists()) {
+      await file.create(recursive: true);
+      await file.writeAsString('[]');
+    }
+    return file;
+  }
+
+  Future<List<ShoppingItem>> readList() async {
+    try {
+      final file = await _localFile;
+      String contents = await file.readAsString();
+      if (contents.trim().isEmpty) return [];
+      List<dynamic> jsonList = json.decode(contents);
+      return jsonList.map((e) => ShoppingItem.fromJson(e)).toList();
+    } catch (e) {
+      debugPrint('Erro ao ler lista: $e');
+      return [];
+    }
+  }
+
+  Future<void> writeList(List<ShoppingItem> items) async {
+    try {
+      final file = await _localFile;
+      String jsonList = json.encode(items.map((e) => e.toJson()).toList());
+      await file.writeAsString(jsonList);
+    } catch (e) {
+      debugPrint('Erro ao salvar lista: $e');
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -29,8 +92,10 @@ class MyApp extends StatelessWidget {
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
       home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -54,17 +119,48 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  List<ShoppingItem> _items = [];
+  final ShoppingListStorage _storage = ShoppingListStorage();
+  final TextEditingController _controller = TextEditingController();
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    final items = await _storage.readList();
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _items = items;
     });
+  }
+
+  Future<void> _saveItems() async {
+    await _storage.writeList(_items);
+  }
+
+  void _addItem(String name) {
+    if (name.trim().isEmpty) return;
+    setState(() {
+      _items.add(ShoppingItem(name: name));
+    });
+    _saveItems();
+    _controller.clear();
+  }
+
+  void _toggleBought(int index) {
+    setState(() {
+      _items[index].bought = !_items[index].bought;
+    });
+    _saveItems();
+  }
+
+  void _deleteItem(int index) {
+    setState(() {
+      _items.removeAt(index);
+    });
+    _saveItems();
   }
 
   @override
@@ -77,46 +173,63 @@ class _MyHomePageState extends State<MyHomePage> {
     // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Lista de Compras'),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    decoration: const InputDecoration(
+                      labelText: 'Adicionar item',
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: _addItem,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () => _addItem(_controller.text),
+                  child: const Text('Adicionar'),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: _items.isEmpty
+                ? const Center(child: Text('Nenhum item na lista.'))
+                : ListView.builder(
+                    itemCount: _items.length,
+                    itemBuilder: (context, index) {
+                      final item = _items[index];
+                      return ListTile(
+                        title: Text(
+                          item.name,
+                          style: TextStyle(
+                            decoration: item.bought
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                          ),
+                        ),
+                        leading: Checkbox(
+                          value: item.bought,
+                          onChanged: (_) => _toggleBought(index),
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _deleteItem(index),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
